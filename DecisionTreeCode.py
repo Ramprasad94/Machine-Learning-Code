@@ -246,7 +246,7 @@ if __name__ == '__main__':
             plt.plot(list(curve.keys()),list(curve.values()))
             plt.xlabel("Depth")
             plt.ylabel("Accuracy")
-            plt.title("Plot showing Depth vs Accuracy for decision tree classifier on monks train and test set")
+            plt.title("Plot showing Depth vs Accuracy for decision tree classifier on given train and test set")
             plt.show()
             print("\nThank you for using the decision tree classifer!")
         else:
