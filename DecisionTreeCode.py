@@ -1,6 +1,4 @@
-import random
 import math
-#import Plot_graph as pt
 import matplotlib.pyplot as plt
 class Decision_node:								# class to represent each node in the tree
     def __init__(self, results=None,depthLevel = 1,col=None,values=None,children=[],hasChildren = False):  #initialize each node in the decision tree
@@ -13,6 +11,7 @@ class Decision_node:								# class to represent each node in the tree
         self.classDist = None           # a variable to give out the class distribution of a particular node
         self.colValues = None
 
+    #This method splits given results set based on a feature
     def splitData(self):
         resultSet = {} # a dictionary to store the rows associated to each attribute value
 
@@ -24,6 +23,7 @@ class Decision_node:								# class to represent each node in the tree
 
         return resultSet
 
+    #This method sets the leaf nodes of decission tree to some class : (0,1)
     def setClassDist(self): # a method to store the class distribution for a node based on majority values
         results = self.results
 
@@ -40,7 +40,7 @@ class Decision_node:								# class to represent each node in the tree
         else:
             self.classDist = 1
 
-
+    #This method classifies a given test record to either : (0/1)
     def classify(self,testRecord):
         if(self.isLeaf):
             return self.classDist
@@ -50,13 +50,12 @@ class Decision_node:								# class to represent each node in the tree
                 if(child.results[0][col] == testRecord[col]):
                     return child.classify(testRecord)
 
+    #This method organizes the decission tree
     def deleteExtraChildren(self):
         result = []
         for i in range(len(self.children)):
             if(self.children[i].parent == self):
                 result.append(self.children[i])
-
-
         self.children = result
 
 def entropy(results):       #a function to calculate the entropy of a particular dataset
@@ -82,6 +81,7 @@ def class_attrib_value_count(results):  # a function to give out the existing cl
             count_dict[value] = 1   # else assign its count as zero
     return count_dict
 
+#This method finds if a given dataset is pure or not i.e., is it all from same class - (0/1)
 def isImPure(results):
     count0=0
     count1=0
@@ -94,7 +94,7 @@ def isImPure(results):
             return True
     return False
 
-
+#This method recursively builds a decission tree for a given dataset , feature list and a  depth
 def buildTree(results,totalDepth,featureList,initialDepth,parent = None):
     newNode = Decision_node(results, initialDepth)
     newNode.parent = parent
@@ -131,6 +131,7 @@ def buildTree(results,totalDepth,featureList,initialDepth,parent = None):
     newNode.deleteExtraChildren()
     return newNode
 
+#This method loads the data from the files
 def populatedInitialData(fileName,fullData):
     file = open(fileName, "r")
     lines = file.readlines()
@@ -142,11 +143,12 @@ def populatedInitialData(fileName,fullData):
         fullData.append(line)
     file.close()
 
-
+#This method Sets a depth value
 def setDepth(value):
     totalDepth = int(value)
     return totalDepth
 
+#Finds the accuracy
 def calculate_accuracy(incorrectly_classified,correctly_classified):
 
     print("\n\n\nIncorrectly classified= " + str(incorrectly_classified) + "\t\t Correctly classified= " + str(correctly_classified)+"\n")
@@ -154,44 +156,43 @@ def calculate_accuracy(incorrectly_classified,correctly_classified):
     print("\nAccuracy for a depth of " + str(totalDepth) + " is " + str(accuracy*100)+" %"+"\n")
     return accuracy
 
+#This method prints the confusion matrix
 def create_confusion_matrix(tp,fn,fp,tn):
-    print("\nThe confusion matrix is as follows:\n")
-    print("                                 Predicted")
-    print("----"*20)
-    print("Actual")
-    print("                 True Negative: "+str(tn), end=" ")
-    print("                 False Positive: "+str(fp))
-    print("\n")
-    print("                 False Negative: "+str(fn), end=" ")
-    print("                 True Positive: "+str(tp))
-    print("----"*20)
+    print "\nThe confusion matrix is as follows:\n"
+    print "                                 Predicted"
+    print "----"*20
+    print "Actual"
+    print "                 True Negative: "+str(tn),
+    print "                 False Positive: "+str(fp)
+    print "\n"
+    print "                 False Negative: "+str(fn),
+    print "                 True Positive: "+str(tp)
+    print "----"*20
 
-
+#This method prints the decission tree
 def printTree(node,num=0):
     if(node.isLeaf == False):
         for child in node.children:
             val = child.results[0][node.col]
             for i in range(num):
-                print ("\t",end="")
-            print ("if(a"+str(node.col)+"=="+str(val)+"):", end="")
+                print "\t",
+            print "if(a"+str(node.col)+"=="+str(val)+"):",
             if(child.isLeaf == False):
-                print ("\n")
+                print "\n"
                 printTree(child,num+1)
             else:
-                print ("class Distribution="+str(child.classDist)+" , Number of records="+str(len(child.results)))
-
+                print "class Distribution="+str(child.classDist)+" , Number of records="+str(len(child.results))
 
 if __name__ == '__main__':
-
     accuracy = []
     depth = []
     curve = {}
     print("\nWelcome to the decision tree classifier implementation!")
     user_choice = "Yes"
     print("\n")
-    training_data_file_location = input("Please give the location of the training file to read:\n")
+    training_data_file_location = raw_input("Please give the name of the training file to read:\n")
     print("\n")
-    test_data_file_location = input("Please give the location of the test file to read:\n")
+    test_data_file_location = raw_input("Please give the name of the test file to read:\n")
     while(True):
         if(user_choice == "Yes" or user_choice == "yes"):
             fullData = []
@@ -199,7 +200,7 @@ if __name__ == '__main__':
 
             featureList = [1, 2, 3, 4, 5, 6]
             print("\n")
-            dp = input("Enter the depth of the tree: ")
+            dp = raw_input("Enter the depth of the tree: ")
             print("\n")
             totalDepth = setDepth(dp)
             depth.append(totalDepth)
@@ -207,7 +208,9 @@ if __name__ == '__main__':
             populatedInitialData(test_data_file_location, testData)
 
             head = buildTree(fullData, totalDepth, featureList, 1)
+            print "************************ DECISSION TREE STARTS *************************"
             printTree(head)
+            print "************************ DECISSION TREE ENDS *************************"
             incorrectly_classified = 0
             correctly_classified = 0
             tp = 0
@@ -235,9 +238,10 @@ if __name__ == '__main__':
             curve[totalDepth]=acc
             create_confusion_matrix(tp,fn,fp,tn)
 
-            user_choice = input("\nDo you want to continue?(Yes/No)\n")
-        else: break
-    user_graph_choice = input("\nDo you want a plot of the Depth vs Accuracy? (Yes,No)\n")
+            user_choice = raw_input("\nDo you want to continue?(Yes/No)\n")
+        else:
+            break
+    user_graph_choice = raw_input("\nDo you want a plot of the Depth vs Accuracy? (Yes,No)\n")
     if(user_graph_choice == "Yes" or user_graph_choice == "yes"):
 
         for key in sorted(curve.keys()):
@@ -246,7 +250,7 @@ if __name__ == '__main__':
             plt.plot(list(curve.keys()),list(curve.values()))
             plt.xlabel("Depth")
             plt.ylabel("Accuracy")
-            plt.title("Plot showing Depth vs Accuracy for decision tree classifier on given train and test set")
+            plt.title("Plot showing Depth vs Accuracy for decision tree classifier on monks train and test set")
             plt.show()
             print("\nThank you for using the decision tree classifer!")
         else:
