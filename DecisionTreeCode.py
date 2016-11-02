@@ -202,9 +202,10 @@ def selectTempData(fullData):
     fullDataCopy = copy.deepcopy(fullData)
     for i in range(int(len(fullData) * 0.8)):
         x=random.choice(fullDataCopy)
+        #print x
         fullDataCopy.remove(x)
         tempData.append(x)
-
+    print "returning tempData"
     return tempData
 
 
@@ -243,8 +244,8 @@ if __name__ == '__main__':
         # Learned the bagged decision tree ensemble
         #learn_bagged(tdepth, nummodels);
         for i in range(nummodels):
-            tempData = selectTempData(fullData)
-            head.append(buildTree(tempData, totalDepth, featureList, 1))
+            #tempData = selectTempData(fullData)
+            head.append(buildTree(fullData, totalDepth, featureList, 1))
 
         # print "************************ DECISSION TREE STARTS *************************"
         # printTree(head)
