@@ -1,8 +1,7 @@
-import math
-import copy
-import time
 import random
-#import matplotlib.pyplot as plt
+import math
+#import Plot_graph as pt
+import matplotlib.pyplot as plt
 class Decision_node:								# class to represent each node in the tree
     def __init__(self, results=None,depthLevel = 1,col=None,values=None,children=[],hasChildren = False):  #initialize each node in the decision tree
         self.results = results          # a list of lists to store the resulting rows
@@ -14,7 +13,6 @@ class Decision_node:								# class to represent each node in the tree
         self.classDist = None           # a variable to give out the class distribution of a particular node
         self.colValues = None
 
-    #This method splits given results set based on a feature
     def splitData(self):
         resultSet = {} # a dictionary to store the rows associated to each attribute value
 
@@ -26,7 +24,6 @@ class Decision_node:								# class to represent each node in the tree
 
         return resultSet
 
-    #This method sets the leaf nodes of decission tree to some class : (0,1)
     def setClassDist(self): # a method to store the class distribution for a node based on majority values
         results = self.results
 
@@ -43,7 +40,7 @@ class Decision_node:								# class to represent each node in the tree
         else:
             self.classDist = 1
 
-    #This method classifies a given test record to either : (0/1)
+
     def classify(self,testRecord):
         if(self.isLeaf):
             return self.classDist
@@ -53,12 +50,13 @@ class Decision_node:								# class to represent each node in the tree
                 if(child.results[0][col] == testRecord[col]):
                     return child.classify(testRecord)
 
-    #This method organizes the decission tree
     def deleteExtraChildren(self):
         result = []
         for i in range(len(self.children)):
             if(self.children[i].parent == self):
                 result.append(self.children[i])
+
+
         self.children = result
 
 def entropy(results):       #a function to calculate the entropy of a particular dataset
@@ -84,7 +82,6 @@ def class_attrib_value_count(results):  # a function to give out the existing cl
             count_dict[value] = 1   # else assign its count as zero
     return count_dict
 
-#This method finds if a given dataset is pure or not i.e., is it all from same class - (0/1)
 def isImPure(results):
     count0=0
     count1=0
@@ -97,9 +94,8 @@ def isImPure(results):
             return True
     return False
 
-#This method recursively builds a decision tree for a given dataset , feature list and a  depth
+
 def buildTree(results,totalDepth,featureList,initialDepth,parent = None):
-    print "entering buildTree"
     newNode = Decision_node(results, initialDepth)
     newNode.parent = parent
     best_gain = 0
@@ -135,26 +131,22 @@ def buildTree(results,totalDepth,featureList,initialDepth,parent = None):
     newNode.deleteExtraChildren()
     return newNode
 
-#This method loads the data from the files
-def load_data(fileName):
-    data = []
+def populatedInitialData(fileName,fullData):
     file = open(fileName, "r")
     lines = file.readlines()
-    for line in lines[1:]:
+    for line in lines:
         line = line.strip()
-        line = line.split(",")
-        for l in range(len(line)):
+        line = line.split(" ")
+        for l in range(len(line)-1):
             line[l]=int(line[l])
-            data.append(line)
+        fullData.append(line)
     file.close()
-    return data
 
-#This method Sets a depth value
+
 def setDepth(value):
     totalDepth = int(value)
     return totalDepth
 
-#Finds the accuracy
 def calculate_accuracy(incorrectly_classified,correctly_classified):
 
     print("\n\n\nIncorrectly classified= " + str(incorrectly_classified) + "\t\t Correctly classified= " + str(correctly_classified)+"\n")
@@ -162,122 +154,101 @@ def calculate_accuracy(incorrectly_classified,correctly_classified):
     print("\nAccuracy for a depth of " + str(totalDepth) + " is " + str(accuracy*100)+" %"+"\n")
     return accuracy
 
-#This method prints the confusion matrix
 def create_confusion_matrix(tp,fn,fp,tn):
-    print "\nThe confusion matrix is as follows:\n"
-    print "                                 Predicted"
-    print "----"*20
-    print "Actual"
-    print "                 True Negative: "+str(tn),
-    print "                 False Positive: "+str(fp)
-    print "\n"
-    print "                 False Negative: "+str(fn),
-    print "                 True Positive: "+str(tp)
-    print "----"*20
+    print("\nThe confusion matrix is as follows:\n")
+    print("                                 Predicted")
+    print("----"*20)
+    print("Actual")
+    print("                 True Negative: "+str(tn), end=" ")
+    print("                 False Positive: "+str(fp))
+    print("\n")
+    print("                 False Negative: "+str(fn), end=" ")
+    print("                 True Positive: "+str(tp))
+    print("----"*20)
 
-#This method prints the decission tree
+
 def printTree(node,num=0):
     if(node.isLeaf == False):
         for child in node.children:
             val = child.results[0][node.col]
             for i in range(num):
-                print "\t",
-            print "if(a"+str(node.col)+"=="+str(val)+"):",
+                print ("\t",end="")
+            print ("if(a"+str(node.col)+"=="+str(val)+"):", end="")
             if(child.isLeaf == False):
-                print "\n"
+                print ("\n")
                 printTree(child,num+1)
             else:
-                print "class Distribution="+str(child.classDist)+" , Number of records="+str(len(child.results))
-
-def learn_bagged(tdepth, numbags):
-    pass;
-
-
-def learn_boosted(tdepth, numtrees):
-    pass;
-
-def selectTempData(fullData):
-    print "entering selectTempData method"
-    tempData = []
-    fullDataCopy = copy.deepcopy(fullData)
-    for i in range(int(len(fullData) * 0.8)):
-        x=random.choice(fullDataCopy)
-        #print x
-        fullDataCopy.remove(x)
-        tempData.append(x)
-    print "returning tempData"
-    return tempData
+                print ("class Distribution="+str(child.classDist)+" , Number of records="+str(len(child.results)))
 
 
 if __name__ == '__main__':
-    time1 = time.time()
-    # entype = sys.argv[1];
-    entype = "bag"
-    # tdepth = int(sys.arg[2]);
-    tdepth = 3
-    nummodels = 2
-    # datapath = sys.argv[4];
 
-    training_data_file_location = "agaricuslepiotatrain1.csv"
-    test_data_file_location = "agaricuslepiotatest1.csv"
+    accuracy = []
+    depth = []
+    curve = {}
+    print("\nWelcome to the decision tree classifier implementation!")
+    user_choice = "Yes"
+    print("\n")
+    training_data_file_location = input("Please give the location of the training file to read:\n")
+    print("\n")
+    test_data_file_location = input("Please give the location of the test file to read:\n")
+    while(True):
+        if(user_choice == "Yes" or user_choice == "yes"):
+            fullData = []
+            testData = []
 
-    fullData = []
-    testData = []
+            featureList = [1, 2, 3, 4, 5, 6]
+            print("\n")
+            dp = input("Enter the depth of the tree: ")
+            print("\n")
+            totalDepth = setDepth(dp)
+            depth.append(totalDepth)
+            populatedInitialData(training_data_file_location, fullData)
+            populatedInitialData(test_data_file_location, testData)
 
-    # @todo: edit the below featureList
-    # 0 to 126 except 21
-    featureList = []
-    for i in range(127):
-        featureList.append(i)
-    featureList.remove(21)
+            head = buildTree(fullData, totalDepth, featureList, 1)
+            printTree(head)
+            incorrectly_classified = 0
+            correctly_classified = 0
+            tp = 0
+            tn = 0
+            fp = 0
+            fn = 0
 
-    totalDepth = setDepth(tdepth)
+            for t in testData:
+                predicted = head.classify(t)
+                if (predicted != t[0]):
+                    incorrectly_classified += 1
+                else:
+                    correctly_classified += 1
 
-    fullData = load_data(training_data_file_location)
-    testData = load_data(test_data_file_location)
-    print "Data loaded successfully"
+                if (predicted == 1 and t[0] == 1):
+                    tp += 1
+                elif (predicted == 0 and t[0] == 1):
+                    fn += 1
+                elif (predicted == 1 and t[0] == 0):
+                    fp += 1
+                elif (predicted == 0 and t[0] == 0):
+                    tn += 1
+            acc = calculate_accuracy(incorrectly_classified,correctly_classified)
+            accuracy.append(acc)
+            curve[totalDepth]=acc
+            create_confusion_matrix(tp,fn,fp,tn)
 
-    head = []
+            user_choice = input("\nDo you want to continue?(Yes/No)\n")
+        else: break
+    user_graph_choice = input("\nDo you want a plot of the Depth vs Accuracy? (Yes,No)\n")
+    if(user_graph_choice == "Yes" or user_graph_choice == "yes"):
 
-    # Check which type of ensemble is to be learned
-    if entype == "bag":
-        # Learned the bagged decision tree ensemble
-        #learn_bagged(tdepth, nummodels);
-        for i in range(nummodels):
-            #tempData = selectTempData(fullData)
-            head.append(buildTree(fullData, totalDepth, featureList, 1))
-
-        # print "************************ DECISSION TREE STARTS *************************"
-        # printTree(head)
-        # print "************************ DECISSION TREE ENDS *************************"
-        incorrectly_classified = 0
-        correctly_classified = 0
-        tp = 0
-        tn = 0
-        fp = 0
-        fn = 0
-        predictedList=[]
-        for t in testData:
-
-            for i in range(len(head)):
-                predictedList.append(head[i].classify(t))
-
-            predicted= max(set(predictedList), key=predictedList.count)
-            if (predicted != t[20]):
-                incorrectly_classified += 1
-            else:
-                correctly_classified += 1
-
-            if (predicted == 1 and t[0] == 1):
-                tp += 1
-            elif (predicted == 0 and t[0] == 1):
-                fn += 1
-            elif (predicted == 1 and t[0] == 0):
-                fp += 1
-            elif (predicted == 0 and t[0] == 0):
-                tn += 1
-        acc = calculate_accuracy(incorrectly_classified,correctly_classified)
-        create_confusion_matrix(tp,fn,fp,tn)
-
-    time2 = time.time()
-    print "Time taken="+str(time2-time1)
+        for key in sorted(curve.keys()):
+            pass
+        if(len(depth) and len(accuracy) >= 2):
+            plt.plot(list(curve.keys()),list(curve.values()))
+            plt.xlabel("Depth")
+            plt.ylabel("Accuracy")
+            plt.title("Plot showing Depth vs Accuracy for decision tree classifier on given train and test set")
+            plt.show()
+            print("\nThank you for using the decision tree classifer!")
+        else:
+            print("\nEnter at least two values of depth and accuracy to generate a graph")
+    else: print("\nThank you for using the decision tree classifer!")
