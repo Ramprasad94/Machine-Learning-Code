@@ -2,7 +2,7 @@ import math
 import copy
 import time
 import random
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 class Decision_node:								# class to represent each node in the tree
     def __init__(self, results=None,depthLevel = 1,col=None,values=None,children=[],hasChildren = False):  #initialize each node in the decision tree
         self.results = results          # a list of lists to store the resulting rows
@@ -97,7 +97,7 @@ def isImPure(results):
             return True
     return False
 
-#This method recursively builds a decission tree for a given dataset , feature list and a  depth
+#This method recursively builds a decision tree for a given dataset , feature list and a  depth
 def buildTree(results,totalDepth,featureList,initialDepth,parent = None):
     print "entering buildTree"
     newNode = Decision_node(results, initialDepth)
