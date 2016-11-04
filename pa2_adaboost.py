@@ -4,6 +4,8 @@
 import random
 import os, sys
 import math
+import math
+import copy
 
 #START OF CLASS DECISION NODE
 class Decision_node:								# class to represent each node in the tree
@@ -83,7 +85,7 @@ def entropy(results):       #a function to calculate the entropy of a particular
     for value in counted_dict.keys():
         p = float(counted_dict[value])/rows_length
         if p<=0:
-            p=1
+            p=float(1)/float(rows_length+2)
         else:
             entropy_value -= (p * math.log(p,2))
     return entropy_value
@@ -166,6 +168,7 @@ def learn_bagged(tdepth, nummodels, datapath):
     for i in range(127):
         featureList.append(i)
     featureList.remove(21)
+    featureList.remove(20)
     totalDepth = tdepth
 
     #loop to create three bootstrap samples according to value given in nummodels
@@ -198,9 +201,11 @@ def learn_bagged(tdepth, nummodels, datapath):
     fp = 0
     fn = 0
     for t in test_data:
+        tcopy = copy.deepcopy(t)
+        tcopy[20] = None
         predictedList = []
         for i in range(len(head)):
-            predictedList.append(head[i].classify(t))
+            predictedList.append(head[i].classify(tcopy))
 
         predicted = max(set(predictedList),key = predictedList.count) #select the maximum predicted value
         if(predicted != t[20]):
@@ -240,9 +245,72 @@ def create_confusion_matrix(tp,fn,fp,tn):
     print "                 True Positive: "+str(tp)
     print "----"*20
 
+############################################################################################################################################
+
+# function which return a dictionary for the weights associated to each column's values
+def weights_value_counts(results):
+    weight_count_dict = {}
+    for row in results:
+        value = row[20]
+        weight = row[-1]
+        if value in weight_count_dict:
+            weight_count_dict[value] += weight
+        else:
+            weight_count_dict[value] = weight
+    return weight_count_dict
 
 
-def learn_boosted(tdepth, numtrees, datapath):
+def entropy_boost(results):       #a function to calculate the entropy of a particular dataset
+    entropy_value = 0.0
+    rows_length = len(results)
+    weight_count_dict =  weights_value_counts(results)
+    for value in weight_count_dict.keys():
+        p = float(weight_count_dict[value])/rows_length
+        if p<=0:
+            p = float(1/(rows_length+2))
+        else:
+            entropy_value -= (p * math.log(p,2))
+    return entropy_value
+
+def buildTree_boost(results,totalDepth,featureList,initialDepth,parent = None):
+    #print "entering buildTree"
+    newNode = Decision_node(results, initialDepth)
+    newNode.parent = parent
+    best_gain = 0
+    best_attrib = None
+    best_partition= None
+    current_entropy = entropy_boost(results) # find out the entropy of the new node containing the subset
+    for column in featureList:
+        newNode.col = column
+        partitions = newNode.splitData()  # split up the node into their resulting children along with their own subsets
+
+        new_entropy = 0.0 # set the intermediate entropy computation to zero
+        for val in partitions: # loop through all the possible column values
+            new_entropy = new_entropy + (entropy_boost(partitions[val]) * (float(len(partitions[val]))/len(results)) ) # calculate the weighted entropy for that column
+        information_gain = current_entropy - new_entropy
+        if (information_gain > best_gain):
+            best_gain = information_gain
+            best_attrib = column
+            best_partition = partitions
+
+    newNode.col = best_attrib # set the column with highest information gain(best attribute) to be the splitting column
+    if(newNode.depthLevel<=totalDepth and len(results)>1 and isImPure(results) and best_attrib!=None) :
+        resultSet = best_partition
+        newNode.colValues=resultSet.keys()
+        for i in resultSet:
+            x = buildTree(resultSet[i],totalDepth,featureList,initialDepth+1,newNode)
+            if x.depthLevel == newNode.depthLevel+1:
+                newNode.children.append(x)
+    else:
+        newNode.isLeaf = True
+        newNode.children = []
+        newNode.setClassDist()
+
+    newNode.deleteExtraChildren()
+    return newNode
+
+
+def learn_boosted(tdepth, nummodels, datapath):
     train_datapath = datapath+"/agaricuslepiotatrain1.csv"
     test_datapath = datapath + "/agaricuslepiotatest1.csv"
     train_data = load_data(train_datapath)
@@ -252,6 +320,7 @@ def learn_boosted(tdepth, numtrees, datapath):
     for i in range(127):
         featureList.append(i)
     featureList.remove(21)
+    featureList.remove(20)
     totalDepth = tdepth
     # replace the 0 in the training and test datasets by -1
     for row in train_data:
@@ -264,26 +333,76 @@ def learn_boosted(tdepth, numtrees, datapath):
             row2[20] = -1
         else:
             row2[20] = 1
-        print row2[20]
-
-    #settings initial weight vector = 1/N
-    weights_list = []
-    for l in range(len(train_data)):
-        weights_list[l] = (float(1)/float((len(train_data))))
 
 
+    #settings initial weight vector = 1/N and adding it to training data
+    equal_weights = float(1) / float(len(train_data))
+    for row in train_data:
+        row.append(equal_weights)
+    #final_predicted_list = []
+    headList=[]
+    for i in range(nummodels):
+        head = buildTree(train_data,totalDepth,featureList,1)
 
+        incorrectly_classified = 0
+        correctly_classified = 0
+        predictedList = []
+        observedList = []
+        #temp_final_list = []
+        for t in train_data:   # run on the train data to calculate error
+            predicted = head.classify(t)
+            predictedList.append(predicted)
+            observedList.append(t[20])
+            if(predicted != t[20]):
+                incorrectly_classified += 1
+            else:
+                correctly_classified +=1
+        acc = calculate_accuracy(incorrectly_classified, correctly_classified)
+        error = (1 - acc)
+        error_compute = float(1-error)/float(error)
+        alpha = 0.5 * math.log(error_compute)
+        headList.append([head,alpha])
+        normalization_factor = 0.0
+        for row3 in train_data:
+             normalization_factor += row3[-1]
+        for i in range(len(train_data)):   # update the training data weights with new weights
+            train_data[i][-1] = (train_data[i][-1] * math.exp((-1)* alpha *predictedList[i]*observedList[i]))/normalization_factor
 
+    incorrectly_classified = 0
+    correctly_classified = 0
+    tp = 0
+    tn = 0
+    fp = 0
+    fn = 0
+    for t in test_data:
+        tcopy = copy.deepcopy(t)
+        tcopy[20] = None
+        predictedList = []
+        for i in range(len(headList)):
+            predicted=headList[i][0].classify(tcopy)
+            predicted *= headList[i][1]
+            predictedList.append(predicted)
 
+        if (sum(predictedList) < 0):
+            predicted=-1
+        else:
+            predicted = 1
+        #predicted = max(set(predictedList), key=predictedList.count)  # select the maximum predicted value
+        if (predicted != t[20]):
+            incorrectly_classified += 1
+        else:
+            correctly_classified += 1
 
-
-
-
-
-
-
-
-
+        if (predicted == 1 and t[20] == 1):
+            tp += 1
+        elif (predicted == -1 and t[20] == 1):
+            fn += 1
+        elif (predicted == 1 and t[20] == -1):
+            fp += 1
+        elif (predicted == -1 and t[20] == -1):
+            tn += 1
+    acc = calculate_accuracy(incorrectly_classified, correctly_classified)
+    create_confusion_matrix(tp, fn, fp, tn)
 
 
 if __name__ == "__main__":
@@ -294,7 +413,7 @@ if __name__ == "__main__":
 
     # Get the ensemble type
     #entype = sys.argv[1];
-    entype = "bag"
+    entype = "boost"
     # Get the depth of the trees
     #tdepth = int(sys.arg[2])
     tdepth = 3
