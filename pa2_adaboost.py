@@ -48,6 +48,22 @@ class Decision_node:								# class to represent each node in the tree
         else:
             self.classDist = 1
 
+    def setClassDistBoost(self):  # a method to store the class distribution for a node based on majority values
+        results = self.results
+
+        count0 = 0
+        count1 = 0
+        for result in results:
+            if (result[20] == -1):
+                count0 += 1
+            elif (result[20] == 1):
+                count1 += 1
+
+        if (count0 > count1):
+            self.classDist = -1
+        else:
+            self.classDist = 1
+
     #This method classifies a given test record to either : (0/1)
     def classify(self,testRecord):
         if(self.isLeaf):
@@ -225,11 +241,13 @@ def learn_bagged(tdepth, nummodels, datapath):
     create_confusion_matrix(tp, fn, fp, tn)
 
 #Finds the accuracy
-def calculate_accuracy(incorrectly_classified,correctly_classified):
+def calculate_accuracy(incorrectly_classified,correctly_classified,isPrint=True):
 
-    print("\n\n\nIncorrectly classified= " + str(incorrectly_classified) + "\t\t Correctly classified= " + str(correctly_classified)+"\n")
+    if isPrint:
+        print("\n\n\nIncorrectly classified= " + str(incorrectly_classified) + "\t\t Correctly classified= " + str(correctly_classified)+"\n")
     accuracy = float(correctly_classified) / (correctly_classified + incorrectly_classified)
-    print("\nAccuracy for a depth of " + str(tdepth) + " is " + str(accuracy*100)+" %"+"\n")
+    if isPrint:
+        print("\nAccuracy for a depth of " + str(tdepth) + " is " + str(accuracy*100)+" %"+"\n")
     return accuracy
 
 #This method prints the confusion matrix
@@ -298,13 +316,13 @@ def buildTree_boost(results,totalDepth,featureList,initialDepth,parent = None):
         resultSet = best_partition
         newNode.colValues=resultSet.keys()
         for i in resultSet:
-            x = buildTree(resultSet[i],totalDepth,featureList,initialDepth+1,newNode)
+            x = buildTree_boost(resultSet[i],totalDepth,featureList,initialDepth+1,newNode)
             if x.depthLevel == newNode.depthLevel+1:
                 newNode.children.append(x)
     else:
         newNode.isLeaf = True
         newNode.children = []
-        newNode.setClassDist()
+        newNode.setClassDistBoost()
 
     newNode.deleteExtraChildren()
     return newNode
@@ -342,13 +360,12 @@ def learn_boosted(tdepth, nummodels, datapath):
     #final_predicted_list = []
     headList=[]
     for i in range(nummodels):
-        head = buildTree(train_data,totalDepth,featureList,1)
+        head = buildTree_boost(train_data,totalDepth,featureList,1)
 
         incorrectly_classified = 0
         correctly_classified = 0
         predictedList = []
         observedList = []
-        #temp_final_list = []
         for t in train_data:   # run on the train data to calculate error
             predicted = head.classify(t)
             predictedList.append(predicted)
@@ -357,7 +374,7 @@ def learn_boosted(tdepth, nummodels, datapath):
                 incorrectly_classified += 1
             else:
                 correctly_classified +=1
-        acc = calculate_accuracy(incorrectly_classified, correctly_classified)
+        acc = calculate_accuracy(incorrectly_classified, correctly_classified,False)
         error = (1 - acc)
         error_compute = float(1-error)/float(error)
         alpha = 0.5 * math.log(error_compute)
@@ -374,12 +391,14 @@ def learn_boosted(tdepth, nummodels, datapath):
     tn = 0
     fp = 0
     fn = 0
+    x=set()
     for t in test_data:
         tcopy = copy.deepcopy(t)
         tcopy[20] = None
         predictedList = []
         for i in range(len(headList)):
             predicted=headList[i][0].classify(tcopy)
+            x.add(predicted)
             predicted *= headList[i][1]
             predictedList.append(predicted)
 
@@ -403,7 +422,7 @@ def learn_boosted(tdepth, nummodels, datapath):
             tn += 1
     acc = calculate_accuracy(incorrectly_classified, correctly_classified)
     create_confusion_matrix(tp, fn, fp, tn)
-
+    print x
 
 if __name__ == "__main__":
     # The arguments to your file will be of the following form:
@@ -419,11 +438,11 @@ if __name__ == "__main__":
     tdepth = 3
     # Get the number of bags or trees
     #nummodels = int(sys.argv[3]);
-    nummodels = 5
+    nummodels = 10
     # Get the location of the data set
     #datapath = sys.argv[4];
-    datapath = "C:/Users/Ramprasad/Desktop/CURRENT SUBJECTS/AML/Programming assignments/PA2/mushrooms"
-
+    #datapath = "C:/Users/Ramprasad/Desktop/CURRENT SUBJECTS/AML/Programming assignments/PA2/mushrooms"
+    datapath = "/Users/hannavaj/Desktop/Study Materials/3rd Sem/AML/PA2/Machine-Learning-Code-repository/mushrooms"
     # Check which type of ensemble is to be learned
     if entype == "bag":
         # Learned the bagged decision tree ensemble
