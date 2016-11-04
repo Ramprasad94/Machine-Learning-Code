@@ -1,5 +1,5 @@
 #!usr/bin/python
-
+#! python2
 #program to implement bagging and boosting
 import random
 import os, sys
@@ -122,7 +122,7 @@ def isImPure(results):
 
 #START OF TREE BUILDING RECURSIVE FUNCTION : This method recursively builds a decision tree for a given dataset , feature list and a  depth
 def buildTree(results,totalDepth,featureList,initialDepth,parent = None):
-    #print "entering buildTree"
+
     newNode = Decision_node(results, initialDepth)
     newNode.parent = parent
     best_gain = 0
@@ -161,7 +161,7 @@ def buildTree(results,totalDepth,featureList,initialDepth,parent = None):
 #END OF TREE BUILDING RECURSIVE FUNCTION
 
 
-def load_data(datapath):
+def load_data(datapath): #load the data
     data = []
     file = open(datapath, "r")
     lines = file.readlines()
@@ -178,36 +178,34 @@ def learn_bagged(tdepth, nummodels, datapath):
     train_datapath = datapath+"/agaricuslepiotatrain1.csv"
     test_datapath = datapath + "/agaricuslepiotatest1.csv"
     train_data = load_data(train_datapath)
-    print "Number of records in train_data = "+str(len(train_data))
+    print "Number of records in training set = "+str(len(train_data))
     test_data = load_data(test_datapath)
     featureList = []
     for i in range(127):
         featureList.append(i)
-    featureList.remove(21)
+    featureList.remove(21)  #remove bruises-no and class label
     featureList.remove(20)
     totalDepth = tdepth
 
     #loop to create three bootstrap samples according to value given in nummodels
-    samples = []
+    samples = [] #contains bootstrap samples
     for i in range(1,nummodels+1):
-        #print "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+
         temp_list = []
         for k in range(int(len(train_data) * 0.8)):
             number = random.randrange(1,len(train_data))
-            #print "Number generated to access record from train_data "+str(number)
+
             temp_list.append(train_data[number])
-            #print train_data[number]
-        #print "Size of temp list " + str(len(temp_list))
-        #print "*******************************************************************************************"
+
         samples.append(temp_list)
 
-    print "Number of samples = "+str(len(samples))
+    print "Number of bags = "+str(len(samples))
 
     head = []
 
     for sample_count in range(nummodels):
         bootstrap = samples[sample_count]
-        print "Number of elements in the bootstrap sample = "+str(len(bootstrap))
+        print "Number of records in the bootstrap sample = "+str(len(bootstrap))
         head.append(buildTree(bootstrap,totalDepth, featureList, 1)) # create required number of decision trees and append it to head list.
     print "Number of decision trees formed = "+str(len(head))
     incorrectly_classified = 0
@@ -265,12 +263,14 @@ def create_confusion_matrix(tp,fn,fp,tn):
 
 ############################################################################################################################################
 
+#BOOSTING SECTION
+
 # function which return a dictionary for the weights associated to each column's values
 def weights_value_counts(results):
     weight_count_dict = {}
     for row in results:
         value = row[20]
-        weight = row[-1]
+        weight = row[-1]  #consider the weights associated to each record in training set
         if value in weight_count_dict:
             weight_count_dict[value] += weight
         else:
@@ -283,15 +283,16 @@ def entropy_boost(results):       #a function to calculate the entropy of a part
     rows_length = len(results)
     weight_count_dict =  weights_value_counts(results)
     for value in weight_count_dict.keys():
-        p = float(weight_count_dict[value])/rows_length
+        p = float(weight_count_dict[value])/rows_length  #calculate probability with weights instead of count
         if p<=0:
-            p = float(1/(rows_length+2))
+            p = float(1/(rows_length+2)) #apply smoothing for p=0 cases
         else:
             entropy_value -= (p * math.log(p,2))
     return entropy_value
 
+#build a tree using a new buildTree for boosting
 def buildTree_boost(results,totalDepth,featureList,initialDepth,parent = None):
-    #print "entering buildTree"
+
     newNode = Decision_node(results, initialDepth)
     newNode.parent = parent
     best_gain = 0
@@ -332,7 +333,7 @@ def learn_boosted(tdepth, nummodels, datapath):
     train_datapath = datapath+"/agaricuslepiotatrain1.csv"
     test_datapath = datapath + "/agaricuslepiotatest1.csv"
     train_data = load_data(train_datapath)
-    print "Number of records in train_data = "+str(len(train_data))
+    print "Number of records in training set = "+str(len(train_data))
     test_data = load_data(test_datapath)
     featureList = []
     for i in range(127):
@@ -357,9 +358,9 @@ def learn_boosted(tdepth, nummodels, datapath):
     equal_weights = float(1) / float(len(train_data))
     for row in train_data:
         row.append(equal_weights)
-    #final_predicted_list = []
+
     headList=[]
-    for i in range(nummodels):
+    for i in range(nummodels): #for each iteration, build a tree with updated weights
         head = buildTree_boost(train_data,totalDepth,featureList,1)
 
         incorrectly_classified = 0
@@ -392,21 +393,21 @@ def learn_boosted(tdepth, nummodels, datapath):
     fp = 0
     fn = 0
     x=set()
-    for t in test_data:
+    for t in test_data: #traverse a test record through all models and get the final predicted value
         tcopy = copy.deepcopy(t)
         tcopy[20] = None
         predictedList = []
         for i in range(len(headList)):
             predicted=headList[i][0].classify(tcopy)
             x.add(predicted)
-            predicted *= headList[i][1]
+            predicted *= headList[i][1] #calculate final hypothesis
             predictedList.append(predicted)
 
-        if (sum(predictedList) < 0):
+        if (sum(predictedList) < 0): #if final hypothesis value is < 0, predict -1 and 1 otherwise
             predicted=-1
         else:
             predicted = 1
-        #predicted = max(set(predictedList), key=predictedList.count)  # select the maximum predicted value
+
         if (predicted != t[20]):
             incorrectly_classified += 1
         else:
@@ -422,7 +423,6 @@ def learn_boosted(tdepth, nummodels, datapath):
             tn += 1
     acc = calculate_accuracy(incorrectly_classified, correctly_classified)
     create_confusion_matrix(tp, fn, fp, tn)
-    print x
 
 if __name__ == "__main__":
     # The arguments to your file will be of the following form:
@@ -431,18 +431,17 @@ if __name__ == "__main__":
     # Ex. boost 1 10 mushrooms
 
     # Get the ensemble type
-    #entype = sys.argv[1];
-    entype = "boost"
+    entype = sys.argv[1];
+    #entype = "boost"
     # Get the depth of the trees
-    #tdepth = int(sys.arg[2])
-    tdepth = 3
+    tdepth = int(sys.argv[2])
+    #tdepth = 2
     # Get the number of bags or trees
-    #nummodels = int(sys.argv[3]);
-    nummodels = 10
+    nummodels = int(sys.argv[3]);
+    #nummodels = 10
     # Get the location of the data set
-    #datapath = sys.argv[4];
-    #datapath = "C:/Users/Ramprasad/Desktop/CURRENT SUBJECTS/AML/Programming assignments/PA2/mushrooms"
-    datapath = "/Users/hannavaj/Desktop/Study Materials/3rd Sem/AML/PA2/Machine-Learning-Code-repository/mushrooms"
+    datapath = sys.argv[4];
+
     # Check which type of ensemble is to be learned
     if entype == "bag":
         # Learned the bagged decision tree ensemble
