@@ -1,5 +1,5 @@
 #!usr/bin/python
-#! python2
+
 #program to implement bagging and boosting
 import random
 import os, sys
