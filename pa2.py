@@ -4,6 +4,7 @@
 import random
 import os, sys
 import math
+import copy
 
 #START OF CLASS DECISION NODE
 class Decision_node:								# class to represent each node in the tree
@@ -166,15 +167,16 @@ def learn_bagged(tdepth, nummodels, datapath):
     for i in range(127):
         featureList.append(i)
     featureList.remove(21)
+    featureList.remove(20)
     totalDepth = tdepth
 
-    #loop to create three bootstrap samples according to value given in nummodels
+    #loop to create  bootstrap samples according to value given in nummodels
     samples = []
     for i in range(1,nummodels+1):
         #print "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
         temp_list = []
         for k in range(int(len(train_data) * 0.8)):
-            number = random.randrange(1,len(train_data))
+            number = random.randrange(0,len(train_data))
             #print "Number generated to access record from train_data "+str(number)
             temp_list.append(train_data[number])
             #print train_data[number]
@@ -186,8 +188,7 @@ def learn_bagged(tdepth, nummodels, datapath):
 
     head = []
 
-    for sample_count in range(nummodels):
-        bootstrap = samples[sample_count]
+    for bootstrap in samples:
         print "Number of elements in the bootstrap sample = "+str(len(bootstrap))
 
         head.append(buildTree(bootstrap,totalDepth, featureList, 1)) # create required number of decision trees and append it to head list.
@@ -200,8 +201,10 @@ def learn_bagged(tdepth, nummodels, datapath):
     fn = 0
     for t in test_data:
         predictedList = []
+        tcopy = copy.deepcopy(t)
+        tcopy[20] = None
         for i in range(len(head)):
-            predictedList.append(head[i].classify(t))
+            predictedList.append(head[i].classify(tcopy))
 
         predicted = max(set(predictedList),key = predictedList.count)
         if(predicted != t[20]):
@@ -259,13 +262,14 @@ if __name__ == "__main__":
     entype = "bag"
     # Get the depth of the trees
     #tdepth = int(sys.arg[2])
-    tdepth = 2
+    tdepth = 3
     # Get the number of bags or trees
     #nummodels = int(sys.argv[3]);
-    nummodels = 2
+    nummodels = 5
     # Get the location of the data set
     #datapath = sys.argv[4];
-    datapath = "C:/Users/Ramprasad/Desktop/CURRENT SUBJECTS/AML/Programming assignments/PA2/mushrooms"
+    #datapath = "C:/Users/Ramprasad/Desktop/CURRENT SUBJECTS/AML/Programming assignments/PA2/mushrooms"
+    datapath = "/Users/hannavaj/Desktop/Study Materials/3rd Sem/AML/PA2/Machine-Learning-Code-repository/mushrooms"
 
     # Check which type of ensemble is to be learned
     if entype == "bag":
